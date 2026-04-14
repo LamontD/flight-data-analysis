@@ -1,8 +1,7 @@
 package com.lamontd.asqp;
 
+import com.lamontd.asqp.index.DistanceCalculator;
 import com.lamontd.asqp.mapper.AirportCodeMapper;
-import com.lamontd.asqp.model.index.DistanceCalculator;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

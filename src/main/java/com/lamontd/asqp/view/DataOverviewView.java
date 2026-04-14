@@ -1,8 +1,8 @@
 package com.lamontd.asqp.view;
 
+import com.lamontd.asqp.index.FlightDataIndex;
 import com.lamontd.asqp.mapper.CancellationCodeMapper;
 import com.lamontd.asqp.model.FlightRecord;
-import com.lamontd.asqp.model.index.FlightDataIndex;
 
 import java.time.LocalDate;
 import java.util.*;

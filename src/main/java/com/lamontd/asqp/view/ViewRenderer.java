@@ -1,8 +1,8 @@
 package com.lamontd.asqp.view;
 
-import java.util.Scanner;
+import com.lamontd.asqp.index.FlightDataIndex;
 
-import com.lamontd.asqp.model.index.FlightDataIndex;
+import java.util.Scanner;
 
 /**
  * Base interface for view renderers
