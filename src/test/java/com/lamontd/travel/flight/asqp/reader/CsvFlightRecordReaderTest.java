@@ -1,4 +1,4 @@
-package com.lamontd.travel.flight.reader;
+package com.lamontd.travel.flight.asqp.reader;
 
 import com.lamontd.travel.flight.mapper.AirportCodeMapper;
 import com.lamontd.travel.flight.model.AirportInfo;
