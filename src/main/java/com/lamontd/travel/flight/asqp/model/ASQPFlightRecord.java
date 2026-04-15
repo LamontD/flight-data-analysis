@@ -1,4 +1,4 @@
-package com.lamontd.travel.flight.model;
+package com.lamontd.travel.flight.asqp.model;
 
 import java.time.Instant;
 import java.time.LocalDate;

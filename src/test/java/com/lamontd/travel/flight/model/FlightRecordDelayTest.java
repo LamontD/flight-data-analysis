@@ -1,5 +1,6 @@
 package com.lamontd.travel.flight.model;
 
+import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

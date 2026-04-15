@@ -3,7 +3,7 @@ package com.lamontd.travel.flight.asqp.view;
 import com.lamontd.travel.flight.util.FlightDataIndex;
 import com.lamontd.travel.flight.mapper.AirportCodeMapper;
 import com.lamontd.travel.flight.mapper.CarrierCodeMapper;
-import com.lamontd.travel.flight.model.ASQPFlightRecord;
+import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
 
 import java.util.List;
 import java.util.Map;

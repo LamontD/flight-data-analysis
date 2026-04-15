@@ -1,7 +1,7 @@
 package com.lamontd.travel.flight.asqp.service;
 
 import com.lamontd.travel.flight.mapper.AirportCodeMapper;
-import com.lamontd.travel.flight.model.ASQPFlightRecord;
+import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
 import com.lamontd.travel.flight.reader.CsvFlightRecordReader;
 
 import java.io.IOException;

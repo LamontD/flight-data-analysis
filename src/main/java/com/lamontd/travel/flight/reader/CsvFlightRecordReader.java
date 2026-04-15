@@ -2,7 +2,7 @@ package com.lamontd.travel.flight.reader;
 
 import com.lamontd.travel.flight.mapper.AirportCodeMapper;
 import com.lamontd.travel.flight.model.AirportInfo;
-import com.lamontd.travel.flight.model.ASQPFlightRecord;
+import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
 import com.lamontd.travel.flight.validation.FlightRecordValidationException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;

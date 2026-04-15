@@ -1,6 +1,6 @@
 package com.lamontd.travel.flight.util;
 
-import com.lamontd.travel.flight.model.ASQPFlightRecord;
+import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
 import com.lamontd.travel.flight.model.FlightRecord;
 import com.lamontd.travel.flight.model.ScheduledFlight;
 

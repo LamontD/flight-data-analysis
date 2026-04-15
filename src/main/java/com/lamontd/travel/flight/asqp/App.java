@@ -2,7 +2,7 @@ package com.lamontd.travel.flight.asqp;
 
 import com.lamontd.travel.flight.asqp.controller.MenuController;
 import com.lamontd.travel.flight.util.FlightDataIndex;
-import com.lamontd.travel.flight.model.ASQPFlightRecord;
+import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
 import com.lamontd.travel.flight.asqp.service.FlightDataLoader;
 import com.lamontd.travel.flight.asqp.view.DataOverviewView;
 
