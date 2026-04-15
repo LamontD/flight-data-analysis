@@ -1,6 +1,6 @@
 # Developer Guide
 
-Complete technical reference for integrating with the ASQP Reader.
+Complete technical reference for integrating with the Flight Data Analysis library (flight-core) and application (asqp-reader).
 
 ## Table of Contents
 
@@ -30,6 +30,9 @@ public class CarrierInfo {
 ### Basic Usage
 
 ```java
+import com.lamontd.travel.flight.mapper.CarrierCodeMapper;
+import com.lamontd.travel.flight.model.CarrierInfo;
+
 // Load default mapper (singleton)
 CarrierCodeMapper mapper = CarrierCodeMapper.getDefault();
 
@@ -77,15 +80,19 @@ System.out.println("Total carriers: " + mapper.size());
 ### Integration with Flight Records
 
 ```java
+import com.lamontd.travel.flight.reader.CsvFlightRecordReader;
+import com.lamontd.travel.flight.mapper.CarrierCodeMapper;
+import com.lamontd.travel.flight.model.ASQPFlightRecord;
+
 CsvFlightRecordReader reader = new CsvFlightRecordReader();
 CarrierCodeMapper mapper = CarrierCodeMapper.getDefault();
 
-List<FlightRecord> records = reader.readFromFile(path);
+List<ASQPFlightRecord> records = reader.readFromFile(path);
 
 // Generate reports with carrier names
 Map<String, Long> stats = records.stream()
     .collect(Collectors.groupingBy(
-        FlightRecord::getCarrierCode,
+        ASQPFlightRecord::getCarrierCode,
         Collectors.counting()
     ));
 

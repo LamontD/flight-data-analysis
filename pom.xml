@@ -1,76 +1,80 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.lamontd.asqp</groupId>
-  <artifactId>asqp-reader</artifactId>
-  <packaging>jar</packaging>
+
+  <groupId>com.lamontd.travel</groupId>
+  <artifactId>flight-data-analysis</artifactId>
   <version>1.0-SNAPSHOT</version>
-  <name>asqp-reader</name>
-  <url>http://maven.apache.org</url>
+  <packaging>pom</packaging>
+
+  <name>Flight Data Analysis</name>
+  <description>Parent project for flight data analysis tools</description>
+
+  <modules>
+    <module>flight-core</module>
+    <module>asqp-reader</module>
+  </modules>
+
   <properties>
     <maven.compiler.target>23</maven.compiler.target>
     <maven.compiler.source>23</maven.compiler.source>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Dependency versions -->
+    <commons-csv.version>1.12.0</commons-csv.version>
+    <gson.version>2.11.0</gson.version>
+    <jgrapht.version>1.5.2</jgrapht.version>
+    <junit.version>5.11.4</junit.version>
   </properties>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-csv</artifactId>
-      <version>1.12.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-      <version>2.11.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jgrapht</groupId>
-      <artifactId>jgrapht-core</artifactId>
-      <version>1.5.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>5.11.4</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <!-- Internal modules -->
+      <dependency>
+        <groupId>com.lamontd.travel</groupId>
+        <artifactId>flight-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <!-- External dependencies -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-csv</artifactId>
+        <version>${commons-csv.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>${gson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jgrapht</groupId>
+        <artifactId>jgrapht-core</artifactId>
+        <version>${jgrapht.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
-    <plugins>
-      <!-- Maven Shade Plugin - Creates executable JAR with all dependencies -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.6.0</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.lamontd.travel.flight.asqp.App</mainClass>
-                </transformer>
-              </transformers>
-              <filters>
-                <filter>
-                  <!-- Exclude signature files to avoid security exceptions -->
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-              <finalName>asqp-reader</finalName>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.13.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.2.5</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 </project>

@@ -1,6 +1,28 @@
-# ASQP Flight Record Reader
+# Flight Data Analysis
 
-A Java application for reading and validating Airline Service Quality Performance (ASQP) flight records from CSV files.
+A multi-module Java application suite for analyzing Airline Service Quality Performance (ASQP) flight records from CSV files.
+
+## Modules
+
+This project consists of two Maven modules:
+
+### flight-core
+Reusable library providing core flight data models and utilities:
+- **Data Models**: `ASQPFlightRecord`, `CarrierInfo`, `AirportInfo`, `CountryInfo`
+- **Mappers**: Carrier, Airport, Country, and Cancellation code mappers
+- **Utilities**: Distance calculator, CSV readers, validators
+- **Reference Data**: 992+ carriers, 6,033+ airports, 193 countries
+
+### asqp-reader
+Interactive command-line application for analyzing flight data:
+- **Data Overview**: Summary statistics, date coverage, carrier/airport analysis
+- **Carrier Analysis**: Filter and analyze by airline
+- **Airport Analysis**: Origin/destination traffic patterns
+- **Airplane Analysis**: Track individual aircraft by tail number
+- **Flight Analysis**: Query specific flight numbers and schedules
+- **Route Network Analysis**: Shortest path calculations between airports
+- **Flight Schedule Analysis**: Identify recurring flights and patterns
+- **Interactive Menu**: User-friendly CLI for exploring data
 
 ## Features
 
@@ -10,33 +32,65 @@ A Java application for reading and validating Airline Service Quality Performanc
 - **Carrier Code Mapping**: Maps 2-letter carrier codes to airline names (992+ airlines)
 - **Airport Data Integration**: Maps 3-letter airport codes to detailed airport information (6,033+ airports)
 - **Country Code Support**: ISO 3166-1 country codes with alpha-2, alpha-3, and name mapping (193 countries)
+- **Distance Calculations**: Haversine formula for calculating flight distances
+- **Graph Analysis**: Route network analysis using JGraphT
 - **Cancellation Handling**: Properly handles cancelled flights (marked with cancellation codes)
 - **Type Safety**: Uses Java 23 with modern `LocalDate` and `LocalTime` types
-- **Error Reporting**: Clear validation error messages with record/field information
-- **Comprehensive Testing**: Full unit test coverage with JUnit 5
+- **Comprehensive Testing**: Full unit test coverage with JUnit 5 (89 tests)
 
 ## Project Structure
 
 ```
-src/main/java/com/lamontd/asqp/
-├── App.java                              # Main application
-├── model/
-│   ├── FlightRecord.java                 # Flight record model with Builder pattern
-│   ├── CarrierInfo.java                  # Carrier information model
-│   └── AirportInfo.java                  # Airport information model
-├── mapper/
-│   ├── CarrierCodeMapper.java            # Maps carrier codes to airline names
-│   └── AirportCodeMapper.java            # Maps airport codes to airport details
-├── reader/
-│   └── CsvFlightRecordReader.java        # CSV parsing and validation
-└── validation/
-    └── FlightRecordValidationException.java  # Custom exception for validation errors
-
-src/main/resources/data/
-├── sample-data.asc.groomed               # Sample ASQP data file
-├── airlines.dat                          # OpenFlights airline database (992+ carriers)
-├── airports.dat                          # OpenFlights airport database (6,033+ airports)
-└── countries.json                        # ISO 3166-1 country codes (193 countries)
+flight-data-analysis/                     # Parent project
+├── pom.xml                               # Parent POM with shared configuration
+├── flight-core/                          # Reusable library module
+│   ├── pom.xml
+│   └── src/main/java/com/lamontd/travel/flight/
+│       ├── model/
+│       │   ├── ASQPFlightRecord.java     # Flight record model with Builder pattern
+│       │   ├── CarrierInfo.java          # Carrier information model
+│       │   ├── AirportInfo.java          # Airport information model
+│       │   └── CountryInfo.java          # Country information model
+│       ├── mapper/
+│       │   ├── CarrierCodeMapper.java    # Maps carrier codes to airline names
+│       │   ├── AirportCodeMapper.java    # Maps airport codes to airport details
+│       │   ├── CountryCodeMapper.java    # Maps country codes (ISO 3166-1)
+│       │   └── CancellationCodeMapper.java # Maps cancellation codes
+│       ├── reader/
+│       │   └── CsvFlightRecordReader.java # CSV parsing and validation
+│       ├── util/
+│       │   └── DistanceCalculator.java   # Haversine distance calculations
+│       └── validation/
+│           └── FlightRecordValidationException.java # Validation errors
+│   └── src/main/resources/data/
+│       ├── airlines.dat                  # OpenFlights airline database (992+ carriers)
+│       ├── airports.dat                  # OpenFlights airport database (6,033+ airports)
+│       └── countries.json                # ISO 3166-1 country codes (193 countries)
+│
+└── asqp-reader/                          # Interactive CLI application
+    ├── pom.xml
+    └── src/main/java/com/lamontd/travel/flight/asqp/
+        ├── App.java                      # Main application entry point
+        ├── model/
+        │   └── ASQPFlightRecord.java     # (Note: to be refactored)
+        ├── index/
+        │   └── FlightDataIndex.java      # Pre-computed indices for efficient queries
+        ├── controller/
+        │   └── MenuController.java       # Interactive menu controller
+        ├── service/
+        │   ├── FlightDataLoader.java     # Parallel file loading
+        │   ├── RouteGraphService.java    # Route network analysis
+        │   └── FlightScheduleService.java # Schedule pattern analysis
+        └── view/
+            ├── DataOverviewView.java     # Summary statistics view
+            ├── CarrierView.java          # Carrier-specific analysis
+            ├── AirportView.java          # Airport traffic analysis
+            ├── AirplaneView.java         # Tail number tracking
+            ├── FlightView.java           # Flight number queries
+            ├── RouteNetworkView.java     # Shortest path analysis
+            └── FlightScheduleView.java   # Recurring flight patterns
+    └── src/main/resources/data/
+        └── sample-data.asc.groomed       # Sample ASQP data file (500 records)
 ```
 
 ## Data Format
@@ -75,18 +129,36 @@ DL|5030|LGA|CVG|20250105|1335|1335|0|1558|1558|0|0|0|N186GJ|B
 
 ## Building
 
-### Build Executable JAR
+### Build All Modules
+
+Build the entire project from the root directory:
 
 ```bash
-mvn clean package
+mvn clean install
 ```
 
-This creates an executable JAR with all dependencies at `target/asqp-reader.jar` (~1.7 MB).
+This will:
+1. Build and install `flight-core` library to local Maven repository
+2. Build `asqp-reader` application (depends on `flight-core`)
+3. Create executable JAR at `asqp-reader/target/asqp-reader.jar`
+4. Run all 89 tests (50 in flight-core, 39 in asqp-reader)
+
+### Build Individual Modules
+
+```bash
+# Build only flight-core
+cd flight-core
+mvn clean install
+
+# Build only asqp-reader (requires flight-core installed)
+cd asqp-reader
+mvn clean package
+```
 
 ### Skip Tests (Faster Build)
 
 ```bash
-mvn clean package -DskipTests
+mvn clean install -DskipTests
 ```
 
 See [docs/BUILD.md](docs/BUILD.md) for complete build and deployment instructions.
@@ -94,68 +166,104 @@ See [docs/BUILD.md](docs/BUILD.md) for complete build and deployment instruction
 ## Running Tests
 
 ```bash
+# Run all tests
 mvn test
+
+# Run tests for specific module
+cd flight-core && mvn test
+cd asqp-reader && mvn test
 ```
 
-## Running the JAR
+## Running the Application
 
-Once built, you can run the application using the JAR file:
+Once built, run the interactive CLI application:
 
 ```bash
-# Process a specific CSV file
-java -jar target/asqp-reader.jar /path/to/data.csv
+# Process one or more data files
+java -jar asqp-reader/target/asqp-reader.jar file1.csv file2.csv file3.csv
 
-# Run with no arguments to process sample data
-java -jar target/asqp-reader.jar
+# Run with sample data (when no arguments provided)
+java -jar asqp-reader/target/asqp-reader.jar
 ```
 
 The JAR is completely self-contained and includes all dependencies and resource files.
 
-Test results from sample data:
+### Interactive Menu
+
+The application provides an interactive menu for data exploration:
+
+```
+==================================================
+ASQP Flight Data Analysis Menu
+==================================================
+1. Data Overview
+2. Carrier View
+3. Airport View
+4. Airplane View
+5. Flight View
+6. Filter by Date Range
+7. Route Network Analysis (Shortest Path)
+8. Flight Schedule Analysis
+9. Exit
+==================================================
+```
+
+### Sample Data Results
+
+The included sample data contains:
 - **Total records**: 500
-- **Operated flights**: 478
-- **Cancelled flights**: 22
-- **Carriers loaded**: 992
-- **Airports loaded**: 6,033
-- **Countries loaded**: 193
+- **Operated flights**: 478 (95.6%)
+- **Cancelled flights**: 22 (4.4%)
+- **Date range**: January 1-31, 2025
+- **Unique carriers**: 1
+- **Unique airports**: 16
+- **Unique routes**: 24
+- **Reference data loaded**: 992 carriers, 6,033 airports, 193 countries
 
-## Usage
+## Using flight-core as a Library
 
-### Running with sample data:
-```bash
-java -jar target/asqp-reader-1.0-SNAPSHOT.jar
+Add `flight-core` as a dependency to your Maven project:
+
+```xml
+<dependency>
+    <groupId>com.lamontd.travel</groupId>
+    <artifactId>flight-core</artifactId>
+    <version>1.0-SNAPSHOT</version>
+</dependency>
 ```
 
-### Running with custom file:
-```bash
-java -jar target/asqp-reader-1.0-SNAPSHOT.jar /path/to/your/data.csv
-```
+Example usage:
 
-### Using as a library:
 ```java
-import com.lamontd.asqp.reader.CsvFlightRecordReader;
-import com.lamontd.asqp.mapper.CarrierCodeMapper;
-import com.lamontd.asqp.mapper.AirportCodeMapper;
-import com.lamontd.asqp.model.FlightRecord;
+import com.lamontd.travel.flight.reader.CsvFlightRecordReader;
+import com.lamontd.travel.flight.mapper.CarrierCodeMapper;
+import com.lamontd.travel.flight.mapper.AirportCodeMapper;
+import com.lamontd.travel.flight.model.ASQPFlightRecord;
+import com.lamontd.travel.flight.util.DistanceCalculator;
 
 // Load flight records
 CsvFlightRecordReader reader = new CsvFlightRecordReader();
-List<FlightRecord> records = reader.readFromFile(Paths.get("data.csv"));
+List<ASQPFlightRecord> records = reader.readFromFile(Paths.get("data.csv"));
 
 // Load mappers
 CarrierCodeMapper carrierMapper = CarrierCodeMapper.getDefault();
 AirportCodeMapper airportMapper = AirportCodeMapper.getDefault();
 
+// Calculate distances
+DistanceCalculator distanceCalc = new DistanceCalculator(airportMapper);
+
 // Process records
-for (FlightRecord record : records) {
+for (ASQPFlightRecord record : records) {
     String carrierName = carrierMapper.getCarrierName(record.getCarrierCode());
     String originCity = airportMapper.getAirportCity(record.getOrigin());
     String destCity = airportMapper.getAirportCity(record.getDestination());
+    double distance = distanceCalc.calculateDistance(record.getOrigin(), record.getDestination());
     
     System.out.println("Flight: " + record.getCarrierCode() + record.getFlightNumber() + 
                        " (" + carrierName + ")");
     System.out.println("Route: " + record.getOrigin() + " (" + originCity + ") -> " + 
                                      record.getDestination() + " (" + destCity + ")");
+    System.out.println("Distance: " + String.format("%.0f miles", distance));
     System.out.println("Cancelled: " + record.isCancelled());
 }
 ```
@@ -352,10 +460,19 @@ Invalid records are logged and skipped, allowing the reader to process the rest 
 
 ## Dependencies
 
+### flight-core
 - **Apache Commons CSV 1.12.0**: CSV parsing
-- **Google Gson 2.11.0**: JSON parsing
+- **Google Gson 2.11.0**: JSON parsing for country data
 - **JUnit Jupiter 5.11.4**: Testing framework
+
+### asqp-reader
+- **flight-core**: Core models and utilities
+- **JGraphT 1.5.2**: Graph analysis for route networks
+- **JUnit Jupiter 5.11.4**: Testing framework
+
+### Build Requirements
 - **Java 23**: Modern Java features and APIs
+- **Maven 3.6+**: Build automation
 
 ## Data Preprocessing
 
@@ -378,4 +495,4 @@ This reduces file sizes by 60-70% by extracting only the necessary fields. See [
 
 ## License
 
-This project is part of the ASQP data analysis suite.
+This project is a custom data analysis suite to process flight data, including the ASQP data found on the BTS website.
