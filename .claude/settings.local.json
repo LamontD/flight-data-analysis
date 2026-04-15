@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(mvn test:*)",
-      "Bash(wc -l c:/Users/d-lamont.dozier/VSCodeProjects/asqp-reader/src/main/java/com/lamontd/asqp/index/*.java)"
+      "Bash(wc -l c:/Users/d-lamont.dozier/VSCodeProjects/asqp-reader/src/main/java/com/lamontd/asqp/index/*.java)",
+      "Bash(find . -name \"*.java\" -type f -exec sed -i 's/^package com\\\\.lamontd\\\\.asqp\\\\.view;/package com.lamontd.travel.flight.asqp.view;/' {} \\\\;)",
+      "Bash(find src/main/java/com/lamontd/travel/flight -name \"*.java\" -type f -exec sed -i 's/^package com\\\\.lamontd\\\\.asqp\\\\.controller;/package com.lamontd.travel.flight.asqp.controller;/' {} \\\\;)"
     ]
   }
 }
