@@ -1,9 +1,12 @@
 package com.lamontd.travel.flight.mapper;
 
 import com.lamontd.travel.flight.model.CarrierInfo;
+import com.lamontd.travel.flight.util.PerformanceTimer;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class CarrierCodeMapper {
+    private static final Logger logger = LoggerFactory.getLogger(CarrierCodeMapper.class);
     private final Map<String, CarrierInfo> carrierMap;
     private static CarrierCodeMapper defaultInstance;
 
@@ -33,17 +37,21 @@ public class CarrierCodeMapper {
      */
     public static synchronized CarrierCodeMapper getDefault() {
         if (defaultInstance == null) {
-            defaultInstance = new CarrierCodeMapper();
-            try {
-                // Try OpenFlights data first
-                defaultInstance.loadFromOpenFlightsResource("/data/airlines.dat");
-            } catch (IOException e) {
-                System.err.println("Warning: Could not load OpenFlights data: " + e.getMessage());
-                // Fall back to simple CSV if available
+            try (var timer = new PerformanceTimer("Load carrier data")) {
+                defaultInstance = new CarrierCodeMapper();
                 try {
-                    defaultInstance.loadFromResource("/data/carriers.csv");
-                } catch (IOException e2) {
-                    System.err.println("Warning: Could not load default carrier data: " + e2.getMessage());
+                    // Try OpenFlights data first
+                    defaultInstance.loadFromOpenFlightsResource("/data/airlines.dat");
+                    logger.info("Loaded {} carriers from OpenFlights data", defaultInstance.size());
+                } catch (IOException e) {
+                    logger.warn("Could not load OpenFlights data: {}", e.getMessage());
+                    // Fall back to simple CSV if available
+                    try {
+                        defaultInstance.loadFromResource("/data/carriers.csv");
+                        logger.info("Loaded {} carriers from fallback data", defaultInstance.size());
+                    } catch (IOException e2) {
+                        logger.warn("Could not load default carrier data: {}", e2.getMessage());
+                    }
                 }
             }
         }

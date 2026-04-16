@@ -3,6 +3,9 @@ package com.lamontd.travel.flight.asqp.service;
 import com.lamontd.travel.flight.mapper.AirportCodeMapper;
 import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
 import com.lamontd.travel.flight.asqp.reader.CsvFlightRecordReader;
+import com.lamontd.travel.flight.util.PerformanceTimer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -16,6 +19,7 @@ import java.util.stream.Collectors;
  * Service for loading flight data from files
  */
 public class FlightDataLoader {
+    private static final Logger logger = LoggerFactory.getLogger(FlightDataLoader.class);
 
     /**
      * Loads flight records from multiple files in parallel
@@ -23,45 +27,41 @@ public class FlightDataLoader {
      * @return Combined list of all flight records
      */
     public List<ASQPFlightRecord> loadFiles(String[] filePaths) {
-        if (filePaths.length == 1) {
-            System.out.println("Loading file...");
-        } else {
-            System.out.printf("Loading %d files in parallel...%n", filePaths.length);
-        }
-        long startTime = System.currentTimeMillis();
+        try (var timer = new PerformanceTimer("Load " + filePaths.length + " file(s)")) {
+            logger.info("Loading {} file(s){}", filePaths.length,
+                    filePaths.length > 1 ? " in parallel" : "");
 
-        // Use parallel streams for multiple files, sequential for single file
-        List<ASQPFlightRecord> allRecords = (filePaths.length > 1
-                ? Arrays.stream(filePaths).parallel()
-                : Arrays.stream(filePaths))
-                .map(this::processFile)
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+            // Use parallel streams for multiple files, sequential for single file
+            List<ASQPFlightRecord> allRecords = (filePaths.length > 1
+                    ? Arrays.stream(filePaths).parallel()
+                    : Arrays.stream(filePaths))
+                    .map(this::processFile)
+                    .filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList());
 
-        long loadTime = System.currentTimeMillis() - startTime;
+            // Show summary
+            if (allRecords.isEmpty()) {
+                logger.error("No valid records found in any file");
+            } else {
+                logger.info("Successfully loaded {} total records from {} file(s)",
+                        allRecords.size(), filePaths.length);
 
-        // Show summary
-        if (allRecords.isEmpty()) {
-            System.err.println("\n✗ No valid records found in any file.");
-        } else {
-            System.out.printf("\n✓ Successfully loaded %,d total records from %d file(s) in %,d ms%n",
-                allRecords.size(), filePaths.length, loadTime);
+                if (filePaths.length > 1) {
+                    logger.debug("Average: {} records per file",
+                            (allRecords.size() / filePaths.length));
+                }
 
-            if (filePaths.length > 1) {
-                System.out.printf("  Average: %,d records per file%n",
-                    (allRecords.size() / filePaths.length));
+                // Show cancelled vs operated summary
+                long cancelled = allRecords.stream().filter(ASQPFlightRecord::isCancelled).count();
+                long operated = allRecords.size() - cancelled;
+                logger.info("Operated: {} ({} %), Cancelled: {} ({} %)",
+                        operated, String.format("%.1f", operated * 100.0 / allRecords.size()),
+                        cancelled, String.format("%.1f", cancelled * 100.0 / allRecords.size()));
             }
 
-            // Show cancelled vs operated summary
-            long cancelled = allRecords.stream().filter(ASQPFlightRecord::isCancelled).count();
-            long operated = allRecords.size() - cancelled;
-            System.out.printf("  Operated: %,d (%.1f%%), Cancelled: %,d (%.1f%%)%n",
-                operated, (operated * 100.0 / allRecords.size()),
-                cancelled, (cancelled * 100.0 / allRecords.size()));
+            return allRecords;
         }
-
-        return allRecords;
     }
 
     /**
@@ -78,19 +78,18 @@ public class FlightDataLoader {
             List<ASQPFlightRecord> records = reader.readFromFile(path);
 
             if (records.isEmpty()) {
-                System.err.println("  Warning: No records found in " + filePath);
+                logger.warn("No records found in {}", filePath);
             } else {
-                System.out.printf("  ✓ Loaded %,d records from %s%n", records.size(),
-                    path.getFileName());
+                logger.info("Loaded {} records from {}", records.size(), path.getFileName());
             }
 
             return records;
 
         } catch (IOException e) {
-            System.err.println("  ✗ Error reading " + filePath + ": " + e.getMessage());
+            logger.error("Error reading {}: {}", filePath, e.getMessage());
             return null;
         } catch (Exception e) {
-            System.err.println("  ✗ Unexpected error processing " + filePath + ": " + e.getMessage());
+            logger.error("Unexpected error processing {}: {}", filePath, e.getMessage());
             return null;
         }
     }

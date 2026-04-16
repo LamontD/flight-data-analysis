@@ -5,7 +5,10 @@ import com.lamontd.travel.flight.mapper.AirportCodeMapper;
 import com.lamontd.travel.flight.mapper.CarrierCodeMapper;
 import com.lamontd.travel.flight.mapper.CountryCodeMapper;
 import com.lamontd.travel.flight.util.DistanceCalculator;
+import com.lamontd.travel.flight.util.PerformanceTimer;
 import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -15,6 +18,7 @@ import java.util.stream.Collectors;
  * Pre-computed indices for efficient data access
  */
 public class FlightDataIndex implements RouteIndex {
+    private static final Logger logger = LoggerFactory.getLogger(FlightDataIndex.class);
     public final List<ASQPFlightRecord> allRecords;
     public final AirportCodeMapper airportMapper;
 
@@ -50,11 +54,10 @@ public class FlightDataIndex implements RouteIndex {
         // Show mapper info
         CarrierCodeMapper carrierMapper = CarrierCodeMapper.getDefault();
         CountryCodeMapper countryMapper = CountryCodeMapper.getDefault();
-        System.out.printf("\nReference data: %d carriers, %d airports, %d countries%n",
-            carrierMapper.size(), airportMapper.size(), countryMapper.size());
+        logger.info("Reference data loaded: {} carriers, {} airports, {} countries",
+                carrierMapper.size(), airportMapper.size(), countryMapper.size());
 
-        System.out.println("Building data indices for efficient querying...");
-        long startTime = System.currentTimeMillis();
+        try (var timer = new PerformanceTimer("Build flight data indices")) {
 
         // Build all indices in a single pass where possible
         this.byCarrier = records.stream()
@@ -107,22 +110,22 @@ public class FlightDataIndex implements RouteIndex {
         airports.addAll(byDestinationAirport.keySet());
         this.uniqueAirports = airports.size();
 
-        // Pre-compute distances for all unique routes
-        System.out.println("Computing route distances...");
-        Set<String> uniqueRoutes = records.stream()
-                .map(r -> r.getOrigin() + "-" + r.getDestination())
-                .collect(Collectors.toSet());
+            // Pre-compute distances for all unique routes
+            logger.debug("Computing route distances...");
+            Set<String> uniqueRoutes = records.stream()
+                    .map(r -> r.getOrigin() + "-" + r.getDestination())
+                    .collect(Collectors.toSet());
 
-        this.routeDistances = uniqueRoutes.stream()
-                .collect(Collectors.toMap(
-                        route -> route,
-                        distanceCalculator::calculateRouteDistance
-                ));
+            this.routeDistances = uniqueRoutes.stream()
+                    .collect(Collectors.toMap(
+                            route -> route,
+                            distanceCalculator::calculateRouteDistance
+                    ));
+        }
 
-        long endTime = System.currentTimeMillis();
-        System.out.printf("Indices built in %d ms%n", (endTime - startTime));
-        System.out.printf("Indexed: %d carriers, %d airports, %d tail numbers, %d flight numbers, %d dates, %d routes%n",
-                byCarrier.size(), airports.size(), byTailNumber.size(), byFlightNumber.size(), byDate.size(), routeDistances.size());
+        logger.info("Indices: {} carriers, {} airports, {} tail numbers, {} flight numbers, {} dates, {} routes",
+                byCarrier.size(), this.uniqueAirports, byTailNumber.size(),
+                byFlightNumber.size(), byDate.size(), routeDistances.size());
     }
 
     public List<ASQPFlightRecord> getByCarrier(String carrierCode) {

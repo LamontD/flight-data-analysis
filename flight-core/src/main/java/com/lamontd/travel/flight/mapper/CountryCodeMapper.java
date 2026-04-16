@@ -3,6 +3,9 @@ package com.lamontd.travel.flight.mapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.lamontd.travel.flight.model.CountryInfo;
+import com.lamontd.travel.flight.util.PerformanceTimer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +22,7 @@ import java.util.stream.Collectors;
  * Maps ISO 3166-1 country codes to country information
  */
 public class CountryCodeMapper {
+    private static final Logger logger = LoggerFactory.getLogger(CountryCodeMapper.class);
     private final Map<String, CountryInfo> byAlpha2;  // Lowercase alpha-2 codes
     private final Map<String, CountryInfo> byAlpha3;  // Lowercase alpha-3 codes
     private final Map<String, CountryInfo> byName;    // Lowercase names
@@ -39,11 +43,14 @@ public class CountryCodeMapper {
      */
     public static synchronized CountryCodeMapper getDefault() {
         if (defaultInstance == null) {
-            defaultInstance = new CountryCodeMapper();
-            try {
-                defaultInstance.loadFromResource("/data/countries.json");
-            } catch (IOException e) {
-                System.err.println("Warning: Could not load default country data: " + e.getMessage());
+            try (var timer = new PerformanceTimer("Load country data")) {
+                defaultInstance = new CountryCodeMapper();
+                try {
+                    defaultInstance.loadFromResource("/data/countries.json");
+                    logger.info("Loaded {} countries from ISO 3166-1 data", defaultInstance.size());
+                } catch (IOException e) {
+                    logger.warn("Could not load default country data: {}", e.getMessage());
+                }
             }
         }
         return defaultInstance;

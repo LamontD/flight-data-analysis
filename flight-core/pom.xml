@@ -33,6 +33,12 @@
       <artifactId>jgrapht-core</artifactId>
     </dependency>
 
+    <!-- SLF4J for logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
     <!-- JUnit for testing -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

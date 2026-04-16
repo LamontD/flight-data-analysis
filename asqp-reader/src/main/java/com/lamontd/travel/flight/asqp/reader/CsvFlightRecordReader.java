@@ -7,6 +7,8 @@ import com.lamontd.travel.flight.validation.FlightRecordValidationException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -23,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CsvFlightRecordReader {
+    private static final Logger logger = LoggerFactory.getLogger(CsvFlightRecordReader.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmm");
 
@@ -67,7 +70,7 @@ public class CsvFlightRecordReader {
                     ASQPFlightRecord flightRecord = parseRecord(csvRecord, recordNumber);
                     records.add(flightRecord);
                 } catch (FlightRecordValidationException e) {
-                    System.err.println("Skipping invalid record: " + e.getMessage());
+                    logger.warn("Skipping invalid record {}: {}", recordNumber, e.getMessage());
                 }
                 recordNumber++;
             }

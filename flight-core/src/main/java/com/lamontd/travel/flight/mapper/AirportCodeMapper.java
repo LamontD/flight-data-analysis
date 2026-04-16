@@ -1,9 +1,12 @@
 package com.lamontd.travel.flight.mapper;
 
 import com.lamontd.travel.flight.model.AirportInfo;
+import com.lamontd.travel.flight.util.PerformanceTimer;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +18,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 public class AirportCodeMapper {
+    private static final Logger logger = LoggerFactory.getLogger(AirportCodeMapper.class);
     private final Map<String, AirportInfo> airportMap;
     private static AirportCodeMapper defaultInstance;
 
@@ -31,11 +35,14 @@ public class AirportCodeMapper {
      */
     public static synchronized AirportCodeMapper getDefault() {
         if (defaultInstance == null) {
-            defaultInstance = new AirportCodeMapper();
-            try {
-                defaultInstance.loadFromOpenFlightsResource("/data/airports.dat");
-            } catch (IOException e) {
-                System.err.println("Warning: Could not load default airport data: " + e.getMessage());
+            try (var timer = new PerformanceTimer("Load airport data")) {
+                defaultInstance = new AirportCodeMapper();
+                try {
+                    defaultInstance.loadFromOpenFlightsResource("/data/airports.dat");
+                    logger.info("Loaded {} airports from OpenFlights data", defaultInstance.size());
+                } catch (IOException e) {
+                    logger.warn("Could not load default airport data: {}", e.getMessage());
+                }
             }
         }
         return defaultInstance;
