@@ -17,6 +17,15 @@ import java.util.stream.Collectors;
 public class FlightView implements ViewRenderer {
 
     /**
+     * Rendering mode for the view
+     */
+    public enum RenderMode {
+        ALL,        // Show all sections (default)
+        OVERVIEW,   // Show only Route Overview + Performance Summary
+        DETAILS     // Show only Daily Flight Report
+    }
+
+    /**
      * Helper class to track route information
      */
     private static class RouteInfo {
@@ -29,6 +38,23 @@ public class FlightView implements ViewRenderer {
             this.distance = distance;
             this.count = 0;
         }
+    }
+
+    private final RenderMode renderMode;
+
+    /**
+     * Creates a FlightView with ALL rendering mode (default)
+     */
+    public FlightView() {
+        this(RenderMode.ALL);
+    }
+
+    /**
+     * Creates a FlightView with specified rendering mode
+     * @param renderMode The rendering mode to use
+     */
+    public FlightView(RenderMode renderMode) {
+        this.renderMode = renderMode;
     }
 
     @Override
@@ -80,7 +106,27 @@ public class FlightView implements ViewRenderer {
                         Collectors.toList()
                 ));
 
-        // Route Overview - show all unique routes with distances
+        // Route Overview - show all unique routes with distances (if not DETAILS mode)
+        if (renderMode != RenderMode.DETAILS) {
+            renderRouteOverview(flightsByDate, index);
+        }
+
+        // Performance Summary (if not DETAILS mode)
+        if (renderMode != RenderMode.DETAILS) {
+            renderPerformanceSummary(flightsByDate, flightRecords, carrierCode, flightNumber);
+        }
+
+        // Daily Flight Report (if not OVERVIEW mode)
+        if (renderMode != RenderMode.OVERVIEW) {
+            renderDailyFlightReport(flightsByDate, airportMapper, cancellationMapper);
+        }
+    }
+
+    /**
+     * Renders the route overview section
+     */
+    private void renderRouteOverview(Map<LocalDate, List<ASQPFlightRecord>> flightsByDate,
+                                     FlightDataIndex index) {
         System.out.println("\n" + "=".repeat(50));
         System.out.println("ROUTE OVERVIEW");
         System.out.println("=".repeat(50));
@@ -122,7 +168,95 @@ public class FlightView implements ViewRenderer {
                     routeInfo.count,
                     routeInfo.count == 1 ? "" : "s");
         }
+    }
 
+    /**
+     * Renders the performance summary section
+     */
+    private void renderPerformanceSummary(Map<LocalDate, List<ASQPFlightRecord>> flightsByDate,
+                                          List<ASQPFlightRecord> flightRecords,
+                                          String carrierCode, String flightNumber) {
+        // Summary statistics
+        long totalOperated = flightsByDate.values().stream()
+                .filter(legs -> legs.stream().anyMatch(l -> !l.isCancelled()))
+                .count();
+        long totalCancelled = flightsByDate.values().stream()
+                .filter(legs -> legs.stream().allMatch(ASQPFlightRecord::isCancelled))
+                .count();
+
+        // Calculate on-time performance (within 15 minutes of scheduled time)
+        List<ASQPFlightRecord> operatedFlights = flightsByDate.values().stream()
+                .flatMap(List::stream)
+                .filter(r -> !r.isCancelled())
+                .toList();
+
+        long onTimeDepartures = operatedFlights.stream()
+                .filter(r -> {
+                    if (r.getScheduledCrsDeparture() == null || r.getGateDeparture().isEmpty()) {
+                        return false;
+                    }
+                    LocalTime scheduled = r.getScheduledCrsDeparture();
+                    LocalTime actual = r.getGateDeparture().get();
+                    long minutesDiff = java.time.Duration.between(scheduled, actual).toMinutes();
+                    return Math.abs(minutesDiff) <= 15;
+                })
+                .count();
+
+        long onTimeArrivals = operatedFlights.stream()
+                .filter(r -> {
+                    if (r.getScheduledCrsArrival() == null || r.getGateArrival().isEmpty()) {
+                        return false;
+                    }
+                    LocalTime scheduled = r.getScheduledCrsArrival();
+                    LocalTime actual = r.getGateArrival().get();
+                    long minutesDiff = java.time.Duration.between(scheduled, actual).toMinutes();
+                    return Math.abs(minutesDiff) <= 15;
+                })
+                .count();
+
+        long flightsWithDepData = operatedFlights.stream()
+                .filter(r -> r.getScheduledCrsDeparture() != null && r.getGateDeparture().isPresent())
+                .count();
+
+        long flightsWithArrData = operatedFlights.stream()
+                .filter(r -> r.getScheduledCrsArrival() != null && r.getGateArrival().isPresent())
+                .count();
+
+        System.out.println("\n" + "=".repeat(50));
+        System.out.println("PERFORMANCE SUMMARY");
+        System.out.println("=".repeat(50));
+
+        System.out.println("\nOperational Stats:");
+        System.out.println("  Total Days: " + flightsByDate.size());
+        System.out.println("  Days Operated: " + totalOperated);
+        System.out.println("  Days Cancelled: " + totalCancelled);
+        if (flightsByDate.size() > 0) {
+            System.out.printf("  Completion Rate: %.1f%%%n",
+                    (totalOperated * 100.0 / flightsByDate.size()));
+        }
+
+        // On-time performance (within 15 minutes)
+        if (flightsWithDepData > 0 || flightsWithArrData > 0) {
+            System.out.println("\nOn-Time Performance (within 15 minutes):");
+            if (flightsWithDepData > 0) {
+                System.out.printf("  Departures: %d / %d (%.1f%%)%n",
+                        onTimeDepartures, flightsWithDepData,
+                        (onTimeDepartures * 100.0 / flightsWithDepData));
+            }
+            if (flightsWithArrData > 0) {
+                System.out.printf("  Arrivals: %d / %d (%.1f%%)%n",
+                        onTimeArrivals, flightsWithArrData,
+                        (onTimeArrivals * 100.0 / flightsWithArrData));
+            }
+        }
+    }
+
+    /**
+     * Renders the daily flight report section
+     */
+    private void renderDailyFlightReport(Map<LocalDate, List<ASQPFlightRecord>> flightsByDate,
+                                         AirportCodeMapper airportMapper,
+                                         CancellationCodeMapper cancellationMapper) {
         System.out.println("\n" + "=".repeat(50));
         System.out.println("DAILY FLIGHT REPORT");
         System.out.println("=".repeat(50));
@@ -204,80 +338,6 @@ public class FlightView implements ViewRenderer {
                         arrTime,
                         tailInfo,
                         status);
-            }
-        }
-
-        // Summary statistics
-        long totalOperated = flightsByDate.values().stream()
-                .filter(legs -> legs.stream().anyMatch(l -> !l.isCancelled()))
-                .count();
-        long totalCancelled = flightsByDate.values().stream()
-                .filter(legs -> legs.stream().allMatch(ASQPFlightRecord::isCancelled))
-                .count();
-
-        // Calculate on-time performance (within 15 minutes of scheduled time)
-        List<ASQPFlightRecord> operatedFlights = flightsByDate.values().stream()
-                .flatMap(List::stream)
-                .filter(r -> !r.isCancelled())
-                .toList();
-
-        long onTimeDepartures = operatedFlights.stream()
-                .filter(r -> {
-                    if (r.getScheduledCrsDeparture() == null || r.getGateDeparture().isEmpty()) {
-                        return false;
-                    }
-                    LocalTime scheduled = r.getScheduledCrsDeparture();
-                    LocalTime actual = r.getGateDeparture().get();
-                    long minutesDiff = java.time.Duration.between(scheduled, actual).toMinutes();
-                    return Math.abs(minutesDiff) <= 15;
-                })
-                .count();
-
-        long onTimeArrivals = operatedFlights.stream()
-                .filter(r -> {
-                    if (r.getScheduledCrsArrival() == null || r.getGateArrival().isEmpty()) {
-                        return false;
-                    }
-                    LocalTime scheduled = r.getScheduledCrsArrival();
-                    LocalTime actual = r.getGateArrival().get();
-                    long minutesDiff = java.time.Duration.between(scheduled, actual).toMinutes();
-                    return Math.abs(minutesDiff) <= 15;
-                })
-                .count();
-
-        long flightsWithDepData = operatedFlights.stream()
-                .filter(r -> r.getScheduledCrsDeparture() != null && r.getGateDeparture().isPresent())
-                .count();
-
-        long flightsWithArrData = operatedFlights.stream()
-                .filter(r -> r.getScheduledCrsArrival() != null && r.getGateArrival().isPresent())
-                .count();
-
-        System.out.println("\n" + "=".repeat(50));
-        System.out.println("PERFORMANCE SUMMARY");
-        System.out.println("=".repeat(50));
-
-        System.out.println("\nOperational Stats:");
-        System.out.println("  Total Days: " + flightsByDate.size());
-        System.out.println("  Days Operated: " + totalOperated);
-        System.out.println("  Days Cancelled: " + totalCancelled);
-        if (flightsByDate.size() > 0) {
-            System.out.printf("  Completion Rate: %.1f%%%n",
-                    (totalOperated * 100.0 / flightsByDate.size()));
-        }
-
-        // On-time performance (within 15 minutes)
-        if (flightsWithDepData > 0 || flightsWithArrData > 0) {
-            System.out.println("\nOn-Time Performance (within 15 minutes):");
-            if (flightsWithDepData > 0) {
-                System.out.printf("  Departures: %d / %d (%.1f%%)%n",
-                        onTimeDepartures, flightsWithDepData,
-                        (onTimeDepartures * 100.0 / flightsWithDepData));
-            }
-            if (flightsWithArrData > 0) {
-                System.out.printf("  Arrivals: %d / %d (%.1f%%)%n",
-                        onTimeArrivals, flightsWithArrData,
-                        (onTimeArrivals * 100.0 / flightsWithArrData));
             }
         }
     }

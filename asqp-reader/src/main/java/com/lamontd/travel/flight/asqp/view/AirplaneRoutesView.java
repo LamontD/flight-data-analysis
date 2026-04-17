@@ -1,9 +1,8 @@
 package com.lamontd.travel.flight.asqp.view;
 
 import com.lamontd.travel.flight.asqp.index.FlightDataIndex;
-import com.lamontd.travel.flight.mapper.AirportCodeMapper;
-import com.lamontd.travel.flight.mapper.CarrierCodeMapper;
 import com.lamontd.travel.flight.asqp.model.ASQPFlightRecord;
+import com.lamontd.travel.flight.mapper.CarrierCodeMapper;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -11,16 +10,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Renders the airplane (tail number) view screen
+ * Renders daily route patterns for a tail number without detailed leg information
+ * Shows only: date, route chain, and total distance
  */
-public class AirplaneView implements ViewRenderer {
+public class AirplaneRoutesView implements ViewRenderer {
 
     @Override
     public void render(FlightDataIndex index, Scanner scanner) {
-        AirportCodeMapper airportMapper = AirportCodeMapper.getDefault();
-
         System.out.println("\n" + "=".repeat(50));
-        System.out.println("AIRPLANE VIEW");
+        System.out.println("AIRPLANE ROUTES");
         System.out.println("=".repeat(50));
 
         System.out.print("\nEnter tail number: ");
@@ -30,7 +28,7 @@ public class AirplaneView implements ViewRenderer {
             return;
         }
 
-        // Use indexed lookup - O(1) instead of O(n)
+        // Use indexed lookup
         List<ASQPFlightRecord> allPlaneFlights = index.getByTailNumber(tailNumber);
 
         if (allPlaneFlights.isEmpty()) {
@@ -79,7 +77,11 @@ public class AirplaneView implements ViewRenderer {
             System.out.println(carrierList);
         }
 
-        System.out.println("Total Operated Flights: " + planeFlights.size());
+        System.out.printf("Total Active Days: %d%n",
+                planeFlights.stream()
+                        .map(ASQPFlightRecord::getDepartureDate)
+                        .distinct()
+                        .count());
         System.out.println("-".repeat(50));
 
         // Group flights by departure date
@@ -90,7 +92,7 @@ public class AirplaneView implements ViewRenderer {
                         Collectors.toList()
                 ));
 
-        System.out.println("\nDaily Flight History:");
+        System.out.println("\nDaily Route History:");
 
         for (Map.Entry<LocalDate, List<ASQPFlightRecord>> entry : flightsByDate.entrySet()) {
             LocalDate date = entry.getKey();
@@ -99,7 +101,7 @@ public class AirplaneView implements ViewRenderer {
             // Sort by departure time
             dailyFlights.sort(Comparator.comparing(r -> r.getGateDeparture().orElse(LocalTime.MIN)));
 
-            // Build the route chain and calculate total distance
+            // Build the route chain
             StringBuilder route = new StringBuilder();
             double totalDistance = 0;
             for (int i = 0; i < dailyFlights.size(); i++) {
@@ -111,52 +113,7 @@ public class AirplaneView implements ViewRenderer {
                 totalDistance += index.getDistance(flight.getOrigin(), flight.getDestination());
             }
 
-            System.out.println("\n  " + date + ":");
-            System.out.printf("    Route: %s (%.0f miles)%n", route, totalDistance);
-            System.out.println("    Legs: " + dailyFlights.size());
-
-            // Show detailed leg information
-            for (ASQPFlightRecord flight : dailyFlights) {
-                String originCity = airportMapper.getAirportCity(flight.getOrigin());
-                String destCity = airportMapper.getAirportCity(flight.getDestination());
-                String depTime = flight.getGateDeparture().map(LocalTime::toString).orElse("--:--");
-                String arrTime = flight.getGateArrival().map(LocalTime::toString).orElse("--:--");
-
-                System.out.printf("      %s%s: %s (%s) [%s] -> %s (%s) [%s]%n",
-                        flight.getCarrierCode(),
-                        flight.getFlightNumber(),
-                        flight.getOrigin(),
-                        originCity,
-                        depTime,
-                        flight.getDestination(),
-                        destCity,
-                        arrTime);
-            }
+            System.out.printf("  %s: %s (%,.0f miles)%n", date, route, totalDistance);
         }
-
-        // Summary statistics
-        System.out.println("\n" + "-".repeat(50));
-        System.out.println("Summary:");
-        System.out.println("  Total Days Operated: " + flightsByDate.size());
-        System.out.println("  Total Flights: " + planeFlights.size());
-        System.out.printf("  Average Flights per Day: %.1f%n",
-                (double) planeFlights.size() / flightsByDate.size());
-
-        // Most common airports
-        Map<String, Long> airportFrequency = planeFlights.stream()
-                .flatMap(r -> java.util.stream.Stream.of(r.getOrigin(), r.getDestination()))
-                .collect(Collectors.groupingBy(
-                        airport -> airport,
-                        Collectors.counting()
-                ));
-
-        System.out.println("\n  Most Visited Airports:");
-        airportFrequency.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .limit(5)
-                .forEach(e -> {
-                    String city = airportMapper.getAirportCity(e.getKey());
-                    System.out.printf("    %s (%s): %d times%n", e.getKey(), city, e.getValue());
-                });
     }
 }

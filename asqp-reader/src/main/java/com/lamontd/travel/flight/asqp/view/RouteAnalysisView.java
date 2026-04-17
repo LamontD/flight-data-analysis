@@ -170,31 +170,121 @@ public class RouteAnalysisView implements ViewRenderer {
             return;
         }
 
-        Set<String> reachable = graphService.getReachableAirports(origin);
+        System.out.print("Enter maximum number of layovers (0 for direct only, or press Enter for unlimited): ");
+        String layoverInput = scanner.nextLine().trim();
 
-        if (reachable.isEmpty()) {
-            System.out.println("\n✗ No reachable airports found from " + origin);
+        Map<String, Integer> reachableWithLayovers;
+        boolean unlimitedLayovers = layoverInput.isEmpty();
+
+        if (unlimitedLayovers) {
+            // Use old method for unlimited layovers
+            Set<String> reachable = graphService.getReachableAirports(origin);
+            if (reachable.isEmpty()) {
+                System.out.println("\n✗ No reachable airports found from " + origin);
+                return;
+            }
+
+            String originCity = airportMapper.getAirportCity(origin);
+            System.out.println("\n" + "=".repeat(50));
+            System.out.printf("AIRPORTS REACHABLE FROM %s (%s)%n", origin, originCity);
+            System.out.println("=".repeat(50));
+            System.out.printf("\nTotal: %d airports%n", reachable.size());
+
+            // Group by first letter for easier reading
+            Map<Character, List<String>> grouped = reachable.stream()
+                    .sorted()
+                    .collect(java.util.stream.Collectors.groupingBy(code -> code.charAt(0)));
+
+            grouped.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> {
+                        System.out.printf("\n%c: ", entry.getKey());
+                        System.out.println(entry.getValue().stream()
+                                .map(code -> code + " (" + airportMapper.getAirportCity(code) + ")")
+                                .collect(java.util.stream.Collectors.joining(", ")));
+                    });
+            return;
+        }
+
+        // Parse max layovers
+        int maxLayovers;
+        try {
+            maxLayovers = Integer.parseInt(layoverInput);
+            if (maxLayovers < 0) {
+                System.out.println("\nInvalid input. Layovers must be 0 or greater.");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("\nInvalid input. Please enter a number.");
+            return;
+        }
+
+        // Use BFS method with layover limit
+        reachableWithLayovers = graphService.getReachableAirportsWithLayoverCount(origin, maxLayovers);
+
+        if (reachableWithLayovers.isEmpty()) {
+            System.out.println("\n✗ No airports reachable from " + origin + " within " + maxLayovers + " layover(s)");
             return;
         }
 
         String originCity = airportMapper.getAirportCity(origin);
         System.out.println("\n" + "=".repeat(50));
-        System.out.printf("AIRPORTS REACHABLE FROM %s (%s)%n", origin, originCity);
+        System.out.printf("AIRPORTS REACHABLE FROM %s (%s) WITH MAX %d LAYOVER%s%n",
+                origin, originCity, maxLayovers, maxLayovers == 1 ? "" : "S");
         System.out.println("=".repeat(50));
-        System.out.printf("\nTotal: %d airports%n", reachable.size());
 
-        // Group by first letter for easier reading
-        Map<Character, List<String>> grouped = reachable.stream()
-                .sorted()
-                .collect(java.util.stream.Collectors.groupingBy(code -> code.charAt(0)));
+        // Group airports by layover count
+        Map<Integer, List<String>> byLayoverCount = reachableWithLayovers.entrySet().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        Map.Entry::getValue,
+                        java.util.stream.Collectors.mapping(Map.Entry::getKey, java.util.stream.Collectors.toList())
+                ));
 
-        grouped.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> {
-                    System.out.printf("\n%c: ", entry.getKey());
-                    System.out.println(entry.getValue().stream()
-                            .map(code -> code + " (" + airportMapper.getAirportCity(code) + ")")
-                            .collect(java.util.stream.Collectors.joining(", ")));
-                });
+        // Display results grouped by layover count
+        for (int layoverCount = 0; layoverCount <= maxLayovers; layoverCount++) {
+            List<String> airportsAtThisLevel = byLayoverCount.get(layoverCount);
+            if (airportsAtThisLevel == null || airportsAtThisLevel.isEmpty()) {
+                continue;
+            }
+
+            airportsAtThisLevel.sort(String::compareTo);
+
+            String layoverLabel;
+            if (layoverCount == 0) {
+                layoverLabel = "Direct (0 layovers)";
+            } else if (layoverCount == 1) {
+                layoverLabel = "1 Layover";
+            } else {
+                layoverLabel = layoverCount + " Layovers";
+            }
+
+            System.out.printf("\n%s: %d airport%s%n", layoverLabel, airportsAtThisLevel.size(),
+                    airportsAtThisLevel.size() == 1 ? "" : "s");
+
+            // Display airports in compact format (multiple per line)
+            StringBuilder line = new StringBuilder("  ");
+            for (String airport : airportsAtThisLevel) {
+                String city = airportMapper.getAirportCity(airport);
+                String entry = airport + " (" + city + "), ";
+
+                // Start new line if current line would be too long
+                if (line.length() + entry.length() > 78) {
+                    System.out.println(line.toString().replaceAll(", $", ""));
+                    line = new StringBuilder("  ");
+                }
+                line.append(entry);
+            }
+
+            // Print remaining airports on last line
+            if (line.length() > 2) {
+                System.out.println(line.toString().replaceAll(", $", ""));
+            }
+        }
+
+        System.out.printf("\nTotal: %d airport%s reachable within %d layover%s%n",
+                reachableWithLayovers.size(),
+                reachableWithLayovers.size() == 1 ? "" : "s",
+                maxLayovers,
+                maxLayovers == 1 ? "" : "s");
     }
 }

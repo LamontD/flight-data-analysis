@@ -169,6 +169,11 @@ public class FlightDataIndex implements RouteIndex {
     }
 
     @Override
+    public Set<String> getActualRoutes() {
+        return routeDistances.keySet();
+    }
+
+    @Override
     public double getRouteDistance(String origin, String destination) {
         String routeKey = origin + "-" + destination;
         return routeDistances.getOrDefault(routeKey,

@@ -1,7 +1,8 @@
 package com.lamontd.travel.flight.asqp.controller;
 
 import com.lamontd.travel.flight.asqp.index.FlightDataIndex;
-import com.lamontd.travel.flight.asqp.view.*;
+import com.lamontd.travel.flight.asqp.view.DateFilterView;
+import com.lamontd.travel.flight.asqp.view.RouteAnalysisView;
 
 import java.time.LocalDate;
 import java.util.Scanner;
@@ -37,35 +38,29 @@ public class MenuController {
 
             switch (input) {
                 case "1":
-                    new DataOverviewView().render(activeIndex, scanner);
+                    new DataViewSubmenu().display(activeIndex, scanner);
                     break;
                 case "2":
-                    new CarrierView().render(activeIndex, scanner);
+                    new AirplaneReportSubmenu().display(activeIndex, scanner);
                     break;
                 case "3":
-                    new AirportView().render(activeIndex, scanner);
+                    new FlightReportSubmenu().display(activeIndex, scanner);
                     break;
                 case "4":
-                    new AirplaneView().render(activeIndex, scanner);
+                    new RouteAnalysisView().render(activeIndex, scanner);
                     break;
                 case "5":
-                    new FlightView().render(activeIndex, scanner);
+                    new ScheduleReportSubmenu().display(activeIndex, scanner);
                     break;
                 case "6":
                     handleDateFilter(scanner);
                     break;
                 case "7":
-                    new RouteAnalysisView().render(activeIndex, scanner);
-                    break;
-                case "8":
-                    new FlightScheduleView().render(activeIndex, scanner);
-                    break;
-                case "9":
                     running = false;
                     System.out.println("\nThank you for using ASQP Flight Data Analysis!");
                     break;
                 default:
-                    System.out.println("\nInvalid option. Please select 1-9.");
+                    System.out.println("\nInvalid option. Please select 1-7.");
             }
         }
         scanner.close();
@@ -98,17 +93,15 @@ public class MenuController {
             System.out.println("-".repeat(50));
         }
 
-        System.out.println("1. Data Overview");
-        System.out.println("2. Carrier View");
-        System.out.println("3. Airport View");
-        System.out.println("4. Airplane View");
-        System.out.println("5. Flight View");
+        System.out.println("1. Data View");
+        System.out.println("2. Airplane Report");
+        System.out.println("3. Flight Report");
+        System.out.println("4. Route Network Analysis");
+        System.out.println("5. Schedule Report");
         System.out.println("6. Filter by Date Range");
-        System.out.println("7. Route Network Analysis (Shortest Path)");
-        System.out.println("8. Flight Schedule Analysis");
-        System.out.println("9. Exit");
+        System.out.println("7. Exit");
         System.out.println("=".repeat(50));
-        System.out.print("Select an option (1-9): ");
+        System.out.print("Select an option (1-7): ");
     }
 
     /**

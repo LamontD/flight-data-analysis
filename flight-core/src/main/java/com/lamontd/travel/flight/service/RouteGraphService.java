@@ -31,7 +31,8 @@ public class RouteGraphService {
     }
 
     /**
-     * Builds the route graph from route index
+     * Builds the route graph from route index.
+     * Only creates edges for routes that have actual flights in the dataset.
      */
     private void buildGraph() {
         // Get all unique airports from the index
@@ -42,12 +43,18 @@ public class RouteGraphService {
         // Add all airports as vertices
         airports.forEach(routeGraph::addVertex);
 
-        // Add all routes as weighted edges
-        for (String origin : index.getOriginAirports()) {
-            for (String dest : index.getDestinationAirports()) {
-                if (!origin.equals(dest)) {
+        // Add edges ONLY for routes that exist in the flight data
+        // getActualRoutes() returns route keys in format "ORIGIN-DESTINATION"
+        for (String routeKey : index.getActualRoutes()) {
+            String[] parts = routeKey.split("-");
+            if (parts.length == 2) {
+                String origin = parts[0];
+                String dest = parts[1];
+
+                // Verify both airports exist as vertices
+                if (routeGraph.containsVertex(origin) && routeGraph.containsVertex(dest)) {
                     double distance = index.getRouteDistance(origin, dest);
-                    if (distance > 0 && routeGraph.containsVertex(origin) && routeGraph.containsVertex(dest)) {
+                    if (distance > 0) {
                         DefaultWeightedEdge edge = routeGraph.addEdge(origin, dest);
                         if (edge != null) {
                             routeGraph.setEdgeWeight(edge, distance);
@@ -84,6 +91,62 @@ public class RouteGraphService {
             }
         }
         return reachable;
+    }
+
+    /**
+     * Finds all airports reachable from the origin within a maximum number of layovers
+     * Uses Breadth-First Search to calculate minimum layover count for each reachable airport
+     *
+     * @param origin The origin airport code
+     * @param maxLayovers Maximum number of layovers allowed (0 = direct only)
+     * @return Map of airport code to minimum layover count (0 = direct, 1 = one stop, etc.)
+     */
+    public Map<String, Integer> getReachableAirportsWithLayoverCount(String origin, int maxLayovers) {
+        if (!routeGraph.containsVertex(origin)) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Integer> reachableWithLayovers = new HashMap<>();
+        Queue<String> queue = new LinkedList<>();
+        Map<String, Integer> layoverCount = new HashMap<>();
+
+        // Start BFS from origin
+        queue.offer(origin);
+        layoverCount.put(origin, -1); // Origin itself doesn't count
+
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            int currentLayovers = layoverCount.get(current);
+
+            // If we've reached max layovers, don't explore further from this node
+            if (currentLayovers >= maxLayovers) {
+                continue;
+            }
+
+            // Explore all neighbors (directly connected airports)
+            for (DefaultWeightedEdge edge : routeGraph.edgesOf(current)) {
+                String neighbor = routeGraph.getEdgeTarget(edge);
+                if (neighbor.equals(current)) {
+                    neighbor = routeGraph.getEdgeSource(edge);
+                }
+
+                // Skip if we've already found a shorter path to this airport
+                if (layoverCount.containsKey(neighbor)) {
+                    continue;
+                }
+
+                int neighborLayovers = currentLayovers + 1;
+                layoverCount.put(neighbor, neighborLayovers);
+                queue.offer(neighbor);
+
+                // Add to results if it's not the origin and within max layovers
+                if (!neighbor.equals(origin) && neighborLayovers <= maxLayovers) {
+                    reachableWithLayovers.put(neighbor, neighborLayovers);
+                }
+            }
+        }
+
+        return reachableWithLayovers;
     }
 
     /**
